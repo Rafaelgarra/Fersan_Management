@@ -14,7 +14,7 @@ from tkinter import scrolledtext, messagebox, ttk
 from packaging import version
 
 warnings.filterwarnings("ignore", category=UserWarning)
-#Test
+
 VERSAO_ATUAL = "1.3.3"
 REPO_USER = "Rafaelgarra"
 REPO_NAME = "Fersan_Management"
