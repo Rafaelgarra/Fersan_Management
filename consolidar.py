@@ -7,9 +7,21 @@ import warnings
 import subprocess
 import tkinter as tk
 import webbrowser
+import requests
+import zipfile
+import shutil
 from tkinter import scrolledtext, messagebox, ttk
 
 warnings.filterwarnings("ignore", category=UserWarning)
+
+# --- CONFIGURAÇÕES DE ATUALIZAÇÃO (PREENCHA AQUI) ---
+VERSAO_ATUAL = "2.5"  # Mude isso aqui sempre que gerar um novo .exe
+REPO_USER = "Rafaelgarra"  # Ex: "JoaoSilva"
+REPO_NAME = "Fersan_Management"     # Ex: "RoboFinanceiro"
+NOME_EXECUTAVEL = "RoboFersan.exe"   # Nome do arquivo final no PC do usuário
+
+# URL da API gerada automaticamente
+URL_CHECK_UPDATE = f"https://api.github.com/repos/{REPO_USER}/{REPO_NAME}/releases/latest"
 
 # --- CONFIGURAÇÕES ---
 if getattr(sys, 'frozen', False):
@@ -127,6 +139,134 @@ def processar_arquivo_individual(caminho, log_func):
         log_func(f"❌ Erro leitura {os.path.basename(caminho)}: {e}")
         return pd.DataFrame()
 
+# ... (resto dos imports)
+
+class AutoUpdater:
+    def __init__(self, current_version, api_url, root_window):
+        self.current_version = current_version
+        self.api_url = api_url
+        self.root = root_window
+        
+    def verificar_atualizacao(self):
+        """
+        Procura versão nova. 
+        Prioridade: 
+        1. Arquivo .ZIP (Atualização Completa - Libs novas)
+        2. Arquivo .EXE (Atualização Rápida - Só código)
+        """
+        try:
+            response = requests.get(self.api_url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                tag_remota = data['tag_name'].replace('v', '')
+                
+                if float(tag_remota) > float(self.current_version):
+                    assets = data.get('assets', [])
+                    
+                    # 1. Tenta achar ZIP (Prioridade para update de libs)
+                    for asset in assets:
+                        if asset['name'].lower().endswith('.zip'):
+                            return asset['browser_download_url'], tag_remota, "ZIP"
+                    
+                    # 2. Se não tem ZIP, tenta achar EXE
+                    for asset in assets:
+                        if asset['name'].lower().endswith('.exe'):
+                            return asset['browser_download_url'], tag_remota, "EXE"
+                            
+            return None, None, None
+        except Exception as e:
+            print(f"Erro ao checar update: {e}")
+            return None, None, None
+
+    def realizar_atualizacao(self, download_url, nova_versao, tipo_arquivo):
+        try:
+            msg_tipo = "completa (inclui novas funções)" if tipo_arquivo == "ZIP" else "rápida"
+            resp = messagebox.askyesno(
+                "Atualização Disponível", 
+                f"A versão {nova_versao} está disponível!\nTipo: Atualização {msg_tipo}.\nDeseja atualizar agora?"
+            )
+            if not resp: return
+
+            if not getattr(sys, 'frozen', False):
+                messagebox.showinfo("Erro", "Atualização só funciona no arquivo compilado (.exe).")
+                return
+
+            app_path = sys.executable
+            app_dir = os.path.dirname(app_path)
+            
+            # Cria pasta temporária para download
+            tmp_dir = os.path.join(app_dir, "temp_update")
+            if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
+            os.makedirs(tmp_dir)
+
+            nome_arquivo = f"update.{tipo_arquivo.lower()}"
+            caminho_download = os.path.join(tmp_dir, nome_arquivo)
+            
+            # --- DOWNLOAD ---
+            # self.root.title("Baixando atualização...") # Opcional: feedback visual simples
+            resposta = requests.get(download_url, stream=True)
+            with open(caminho_download, 'wb') as f:
+                for chunk in resposta.iter_content(chunk_size=4096):
+                    f.write(chunk)
+
+            # --- PREPARAÇÃO DO SCRIPT DE TROCA ---
+            bat_script = os.path.join(app_dir, "updater.bat")
+            
+            if tipo_arquivo == "ZIP":
+                # Extrai o ZIP na pasta temporária
+                with zipfile.ZipFile(caminho_download, 'r') as zip_ref:
+                    zip_ref.extractall(tmp_dir)
+                
+                # O conteúdo extraído geralmente cria uma subpasta ou solta os arquivos.
+                # Vamos assumir que solta os arquivos.
+                # O comando XCOPY do Windows é usado para mesclar pastas
+                
+                # Remove o zip baixado para não copiar ele junto
+                os.remove(caminho_download)
+                
+                # Script BAT Robusto para pasta
+                cmd = f"""
+                @echo off
+                timeout /t 3 /nobreak > NUL
+                echo Atualizando arquivos...
+                
+                REM Copia tudo da pasta temporária para a pasta do app, sobrescrevendo
+                xcopy "{tmp_dir}\\*" "{app_dir}\\" /E /H /C /I /Y
+                
+                REM Limpa a bagunça
+                rmdir /s /q "{tmp_dir}"
+                
+                REM Reinicia
+                start "" "{app_path}"
+                del "%~f0"
+                """
+
+            else: # Lógica antiga do EXE (Simples)
+                nome_original = os.path.basename(app_path)
+                novo_exe = os.path.join(app_dir, f"update_{nome_original}")
+                shutil.move(caminho_download, novo_exe)
+                shutil.rmtree(tmp_dir) # Remove a pasta temp vazia
+
+                cmd = f"""
+                @echo off
+                timeout /t 2 /nobreak > NUL
+                del "{nome_original}"
+                ren "{os.path.basename(novo_exe)}" "{nome_original}"
+                start "" "{nome_original}"
+                del "%~f0"
+                """
+            
+            with open(bat_script, "w") as bat:
+                bat.write(cmd)
+            
+            messagebox.showinfo("Reiniciando", "O aplicativo será fechado para aplicar a atualização.")
+            subprocess.Popen([bat_script], shell=True)
+            self.root.destroy()
+            sys.exit()
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao atualizar: {e}")
+
 # --- INTERFACE GRÁFICA ---
 class RoboFinanceiroApp:
     def __init__(self, root):
@@ -186,6 +326,22 @@ class RoboFinanceiroApp:
         # Rodapé
         lbl_footer = tk.Label(root, text="v2.5 - Novo Layout (8 Colunas)", bg="#E8E8E8", fg="#999")
         lbl_footer.pack(side=tk.BOTTOM, pady=5)
+
+        self.root.after(2000, self.checar_updates_bg)
+
+
+    def checar_updates_bg(self):
+        """Roda a verificação em thread separada para não travar a GUI"""
+        threading.Thread(target=self._processo_update, daemon=True).start()
+
+    def _processo_update(self):
+        updater = AutoUpdater(VERSAO_ATUAL, URL_CHECK_UPDATE, self.root)
+        # AGORA RECEBE 3 VALORES
+        url, nova_versao, tipo = updater.verificar_atualizacao()
+        
+        if url:
+            # Passa o 'tipo' também
+            self.root.after(0, lambda: updater.realizar_atualizacao(url, nova_versao, tipo))
 
     def abrir_dashboard(self):
         try:
