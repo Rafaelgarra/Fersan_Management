@@ -15,7 +15,7 @@ from packaging import version
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-VERSAO_ATUAL = "1.3.1"
+VERSAO_ATUAL = "1.3.2"
 REPO_USER = "Rafaelgarra"
 REPO_NAME = "Fersan_Management"
 NOME_EXECUTAVEL = "RoboFersan.exe"
@@ -184,9 +184,17 @@ class AutoUpdater:
             caminho_download = os.path.join(tmp_dir, nome_arquivo)
             
             resposta = requests.get(download_url, stream=True)
+            total_size = int(resposta.headers.get('content-length', 0))
+            
             with open(caminho_download, 'wb') as f:
+                baixado = 0
                 for chunk in resposta.iter_content(chunk_size=4096):
                     f.write(chunk)
+                    baixado += len(chunk)
+                    
+                    if callback_progresso and total_size > 0:
+                        porcentagem = (baixado / total_size) * 100
+                        callback_progresso(porcentagem, f"Baixando atualização... {int(porcentagem)}%")
 
             bat_script = os.path.join(app_dir, "updater.bat")
             
@@ -295,7 +303,7 @@ class RoboFinanceiroApp:
         url, nova_versao, tipo = updater.verificar_atualizacao()
         
         if url:
-            self.root.after(0, lambda: updater.realizar_atualizacao(url, nova_versao, tipo))
+            self.root.after(0, lambda: updater.realizar_atualizacao(url, nova_versao, tipo, self.atualizar_barra))
 
     def abrir_dashboard(self):
         try:
