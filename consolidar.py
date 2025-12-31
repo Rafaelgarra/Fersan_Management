@@ -15,16 +15,13 @@ from packaging import version
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# --- CONFIGURAÇÕES DE ATUALIZAÇÃO (PREENCHA AQUI) ---
-VERSAO_ATUAL = "1.3"  # Mude isso aqui sempre que gerar um novo .exe
-REPO_USER = "Rafaelgarra"  # Ex: "JoaoSilva"
-REPO_NAME = "Fersan_Management"     # Ex: "RoboFinanceiro"
-NOME_EXECUTAVEL = "RoboFersan.exe"   # Nome do arquivo final no PC do usuário
+VERSAO_ATUAL = "1.3.1"
+REPO_USER = "Rafaelgarra"
+REPO_NAME = "Fersan_Management"
+NOME_EXECUTAVEL = "RoboFersan.exe"
 
-# URL da API gerada automaticamente
 URL_CHECK_UPDATE = f"https://api.github.com/repos/{REPO_USER}/{REPO_NAME}/releases/latest"
 
-# --- CONFIGURAÇÕES ---
 if getattr(sys, 'frozen', False):
     CAMINHO_BASE = os.path.dirname(sys.executable)
 else:
@@ -33,7 +30,6 @@ else:
 PASTA_INPUT = os.path.join(CAMINHO_BASE, 'extratos_bancarios')
 ARQUIVO_FINAL = os.path.join(CAMINHO_BASE, 'FLUXO_CAIXA_FERSAN.xlsx')
 
-# --- FUNÇÕES DE AJUDA ---
 def limpar_valor(valor):
     try:
         if isinstance(valor, (int, float)): return float(valor)
@@ -59,25 +55,20 @@ def carregar_dados_existentes(log_func):
 
         df_full.columns = df_full.columns.astype(str).str.upper().str.strip()
 
-        # --- CORREÇÃO AQUI: Ajustado para ler 8 colunas (0 a 8) ---
-        # Se o arquivo for antigo (7 colunas), precisamos tratar o erro ou criar a coluna vazia
         try:
-            df_ent = df_full.iloc[:, 0:8].copy() # Antes era 0:7
+            df_ent = df_full.iloc[:, 0:8].copy()
             df_ent.columns = ["DATA", "TIPO", "DESCRIÇÃO", "VALOR ", "BANCO", "STATUS", "REFERENCIA", "OBSERVAÇÃO"]
         except Exception:
-            # Fallback para arquivos antigos (7 colunas) - Lê 7 e cria a 8ª vazia
             df_ent = df_full.iloc[:, 0:7].copy()
             df_ent.columns = ["DATA", "TIPO", "DESCRIÇÃO", "VALOR ", "BANCO", "STATUS", "REFERENCIA"]
-            df_ent["OBSERVAÇÃO"] = "" # Cria a coluna nova vazia
+            df_ent["OBSERVAÇÃO"] = ""
             
         df_ent = df_ent[df_ent["DATA"].notna()]
 
-        # --- CORREÇÃO AQUI: Ajustado para ler Saídas (J a Q) ---
         try:
-            df_sai = df_full.iloc[:, 9:17].copy() # Antes era 9:16
+            df_sai = df_full.iloc[:, 9:17].copy()
             df_sai.columns = ["DATA", "TIPO", "DESCRIÇÃO", "VALOR ", "BANCO", "STATUS", "REFERENCIA", "OBSERVAÇÃO"]
         except Exception:
-             # Fallback para arquivos antigos
             df_sai = df_full.iloc[:, 9:16].copy()
             df_sai.columns = ["DATA", "TIPO", "DESCRIÇÃO", "VALOR ", "BANCO", "STATUS", "REFERENCIA"]
             df_sai["OBSERVAÇÃO"] = ""
@@ -100,7 +91,7 @@ def processar_arquivo_individual(caminho, log_func):
             try:
                 df = pd.read_csv(caminho, sep=',')
                 if 'RELEASE_DATE' not in df.columns and ';' in open(caminho).readline():
-                     df = pd.read_csv(caminho, sep=';')
+                      df = pd.read_csv(caminho, sep=';')
             except:
                 df = pd.read_csv(caminho)
         else: 
@@ -131,7 +122,7 @@ def processar_arquivo_individual(caminho, log_func):
                     "BANCO": "MERCADO PAGO",
                     "STATUS": "COMPLETO",
                     "REFERENCIA": f"REF: {row.get(col_ref, '')}" if col_ref else "",
-                    "OBSERVAÇÃO": "" # Coluna nova vazia para uso manual
+                    "OBSERVAÇÃO": ""
                 })
             except: continue
             
@@ -140,8 +131,6 @@ def processar_arquivo_individual(caminho, log_func):
         log_func(f"❌ Erro leitura {os.path.basename(caminho)}: {e}")
         return pd.DataFrame()
 
-# ... (resto dos imports)
-
 class AutoUpdater:
     def __init__(self, current_version, api_url, root_window):
         self.current_version = current_version
@@ -149,12 +138,6 @@ class AutoUpdater:
         self.root = root_window
         
     def verificar_atualizacao(self):
-        """
-        Procura versão nova. 
-        Prioridade: 
-        1. Arquivo .ZIP (Atualização Completa - Libs novas)
-        2. Arquivo .EXE (Atualização Rápida - Só código)
-        """
         try:
             response = requests.get(self.api_url, timeout=5)
             if response.status_code == 200:
@@ -164,12 +147,10 @@ class AutoUpdater:
                 if version.parse(tag_remota) > version.parse(self.current_version):
                     assets = data.get('assets', [])
                     
-                    # 1. Tenta achar ZIP (Prioridade para update de libs)
                     for asset in assets:
                         if asset['name'].lower().endswith('.zip'):
                             return asset['browser_download_url'], tag_remota, "ZIP"
                     
-                    # 2. Se não tem ZIP, tenta achar EXE
                     for asset in assets:
                         if asset['name'].lower().endswith('.exe'):
                             return asset['browser_download_url'], tag_remota, "EXE"
@@ -195,7 +176,6 @@ class AutoUpdater:
             app_path = sys.executable
             app_dir = os.path.dirname(app_path)
             
-            # Cria pasta temporária
             tmp_dir = os.path.join(app_dir, "temp_update")
             if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
             os.makedirs(tmp_dir)
@@ -203,50 +183,37 @@ class AutoUpdater:
             nome_arquivo = f"update.{tipo_arquivo.lower()}"
             caminho_download = os.path.join(tmp_dir, nome_arquivo)
             
-            # --- DOWNLOAD COM PROGRESSO VISUAL ---
-            # Acessa os widgets da janela
             resposta = requests.get(download_url, stream=True)
             with open(caminho_download, 'wb') as f:
                 for chunk in resposta.iter_content(chunk_size=4096):
                     f.write(chunk)
 
-            # --- PREPARAÇÃO DO SCRIPT DE TROCA ---
             bat_script = os.path.join(app_dir, "updater.bat")
             
             if tipo_arquivo == "ZIP":
-                # Extrai o ZIP na pasta temporária
                 with zipfile.ZipFile(caminho_download, 'r') as zip_ref:
                     zip_ref.extractall(tmp_dir)
                 
-                # O conteúdo extraído geralmente cria uma subpasta ou solta os arquivos.
-                # Vamos assumir que solta os arquivos.
-                # O comando XCOPY do Windows é usado para mesclar pastas
-                
-                # Remove o zip baixado para não copiar ele junto
                 os.remove(caminho_download)
                 
-                # Script BAT Robusto para pasta
                 cmd = f"""
                 @echo off
                 timeout /t 3 /nobreak > NUL
                 echo Atualizando arquivos...
                 
-                REM Copia tudo da pasta temporária para a pasta do app, sobrescrevendo
                 xcopy "{tmp_dir}\\*" "{app_dir}\\" /E /H /C /I /Y
                 
-                REM Limpa a bagunça
                 rmdir /s /q "{tmp_dir}"
                 
-                REM Reinicia
                 start "" "{app_path}"
                 del "%~f0"
                 """
 
-            else: # Lógica antiga do EXE (Simples)
+            else:
                 nome_original = os.path.basename(app_path)
                 novo_exe = os.path.join(app_dir, f"update_{nome_original}")
                 shutil.move(caminho_download, novo_exe)
-                shutil.rmtree(tmp_dir) # Remove a pasta temp vazia
+                shutil.rmtree(tmp_dir)
 
                 cmd = f"""
                 @echo off
@@ -268,7 +235,6 @@ class AutoUpdater:
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao atualizar: {e}")
 
-# --- INTERFACE GRÁFICA ---
 class RoboFinanceiroApp:
     def __init__(self, root):
         self.root = root
@@ -276,29 +242,23 @@ class RoboFinanceiroApp:
         self.root.geometry("600x550")
         self.root.configure(bg="#E8E8E8")
 
-        # --- CONTROLE DE PROCESSO DO DASHBOARD ---
         self.processo_dash = None
         self.root.protocol("WM_DELETE_WINDOW", self.ao_fechar) 
-        # ----------------------------------------
 
-        # Cabeçalho
         frame_top = tk.Frame(root, bg="#2F75B5", height=60)
         frame_top.pack(fill=tk.X)
         lbl_titulo = tk.Label(frame_top, text="FERSAN FINANCEIRO", font=("Segoe UI", 18, "bold"), bg="#2F75B5", fg="white")
         lbl_titulo.pack(pady=10)
 
-        # Info
         lbl_info = tk.Label(root, text=f"Pasta de Leitura: .../extratos_bancarios", font=("Segoe UI", 9), bg="#E8E8E8", fg="#555")
         lbl_info.pack(pady=10)
 
-        # Botão Processar
         self.btn_processar = tk.Button(root, text="INICIAR CONSOLIDAÇÃO", font=("Segoe UI", 12, "bold"), 
                                        bg="#4CAF50", fg="white", activebackground="#45a049",
                                        relief=tk.FLAT, height=2, width=30, cursor="hand2",
                                        command=self.iniciar_thread)
         self.btn_processar.pack(pady=5)
 
-        # Botão Dashboard
         self.btn_dashboard = tk.Button(
             root,
             text="📊 ABRIR DASHBOARD",
@@ -313,35 +273,28 @@ class RoboFinanceiroApp:
         )
         self.btn_dashboard.pack(pady=5)
 
-        # Barra de Progresso
         self.lbl_progresso = tk.Label(root, text="Aguardando...", bg="#E8E8E8", font=("Segoe UI", 9))
         self.lbl_progresso.pack(pady=(15, 0))
         
         self.progress = ttk.Progressbar(root, orient="horizontal", length=520, mode="determinate")
         self.progress.pack(pady=5)
 
-        # Log
         self.log_area = scrolledtext.ScrolledText(root, width=70, height=12, font=("Consolas", 9), state='disabled')
         self.log_area.pack(pady=10, padx=10)
         
-        # Rodapé
         lbl_footer = tk.Label(root, text=f"v{VERSAO_ATUAL} - Novo Layout (8 Colunas)", bg="#E8E8E8", fg="#999")
         lbl_footer.pack(side=tk.BOTTOM, pady=5)
 
         self.root.after(2000, self.checar_updates_bg)
 
-
     def checar_updates_bg(self):
-        """Roda a verificação em thread separada para não travar a GUI"""
         threading.Thread(target=self._processo_update, daemon=True).start()
 
     def _processo_update(self):
         updater = AutoUpdater(VERSAO_ATUAL, URL_CHECK_UPDATE, self.root)
-        # AGORA RECEBE 3 VALORES
         url, nova_versao, tipo = updater.verificar_atualizacao()
         
         if url:
-            # Passa o 'tipo' também
             self.root.after(0, lambda: updater.realizar_atualizacao(url, nova_versao, tipo))
 
     def abrir_dashboard(self):
@@ -418,7 +371,6 @@ class RoboFinanceiroApp:
 
         self.atualizar_barra(5, "Lendo histórico...")
         
-        # --- PRESERVAÇÃO DE ABAS MANUAIS ---
         abas_existentes = {}
         if os.path.exists(ARQUIVO_FINAL):
             try:
@@ -429,7 +381,6 @@ class RoboFinanceiroApp:
                 self.log(f" ℹ️ Abas manuais encontradas: {list(abas_existentes.keys())}")
             except Exception as e:
                 self.log(f"Aviso: Não consegui ler outras abas ({e})")
-        # -----------------------------------
 
         df_mestre = carregar_dados_existentes(self.log)
         
@@ -471,7 +422,6 @@ class RoboFinanceiroApp:
         df_auto = df_total[~mask_manual]
 
         qtd_antes = len(df_auto)
-        # REFERENCIA agora é usada para remover duplicatas (mais seguro)
         df_auto = df_auto.drop_duplicates(subset=['DATA', 'DESCRIÇÃO', 'VALOR ', 'REFERENCIA'], keep='last')
         df_total = pd.concat([df_manuais, df_auto], ignore_index=True)
         
@@ -479,12 +429,8 @@ class RoboFinanceiroApp:
 
         self.atualizar_barra(95, "Salvando Excel...")
         
-        # --- FIX: LIMPEZA DE DADOS NAN ---
-        # Garante que números sejam float e preenche vazios com 0.0
         df_total['VALOR '] = pd.to_numeric(df_total['VALOR '], errors='coerce').fillna(0.0)
-        # Garante que o resto dos vazios virem string vazia
         df_total = df_total.fillna("")
-        # ---------------------------------
 
         df_total.sort_values('DATA', inplace=True)
         df_ent = df_total[df_total['TIPO'] == 'ENTRADA']
@@ -501,16 +447,13 @@ class RoboFinanceiroApp:
                 fmt_money = wb.add_format({'num_format': 'R$ #,##0.00'})
                 fmt_date = wb.add_format({'num_format': 'dd/mm/yyyy', 'align': 'center'})
 
-                # --- CORREÇÃO DE LAYOUT: AUMENTADO PARA COBRIR 8 COLUNAS ---
-                # Entradas vai de A até H (8 colunas)
                 ws.merge_range('A1:H1', "ENTRADAS (CRÉDITO)", fmt_titulo)
-                # Saídas vai de J até Q (8 colunas), Pulando a coluna I
                 ws.merge_range('J1:Q1', "SAÍDAS (DÉBITO)", fmt_titulo)
 
                 cols = ["DATA", "TIPO", "DESCRIÇÃO", "VALOR ", "BANCO", "STATUS", "REFERENCIA", "OBSERVAÇÃO"]
                 for i, c in enumerate(cols):
-                    ws.write(1, i, c, fmt_head)      # Escreve na tabela da Esquerda
-                    ws.write(1, i + 9, c, fmt_head)  # Escreve na tabela da Direita (Pula 9 colunas)
+                    ws.write(1, i, c, fmt_head)
+                    ws.write(1, i + 9, c, fmt_head)
 
                 for r, row in enumerate(df_ent.values):
                     ws.write_row(r+2, 0, row)
@@ -518,14 +461,13 @@ class RoboFinanceiroApp:
                     ws.write(r+2, 3, row[3], fmt_money)
 
                 for r, row in enumerate(df_sai.values):
-                    ws.write_row(r+2, 9, row) # Começa na coluna 9 (J)
+                    ws.write_row(r+2, 9, row)
                     ws.write(r+2, 9, row[0], fmt_date)
                     ws.write(r+2, 12, row[3], fmt_money)
                 
-                # Ajuste de Largura das Colunas
-                ws.set_column('A:A', 12); ws.set_column('J:J', 12) # Datas
-                ws.set_column('C:C', 40); ws.set_column('L:L', 40) # Descrição
-                ws.set_column('G:H', 25); ws.set_column('P:Q', 25) # Referencia e Obs (Mais largos)
+                ws.set_column('A:A', 12); ws.set_column('J:J', 12)
+                ws.set_column('C:C', 40); ws.set_column('L:L', 40)
+                ws.set_column('G:H', 25); ws.set_column('P:Q', 25)
 
                 if abas_existentes:
                     self.log(f"Restaurando {len(abas_existentes)} abas manuais...")
