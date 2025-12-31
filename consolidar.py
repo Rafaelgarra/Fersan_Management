@@ -157,10 +157,10 @@ class AutoUpdater:
                             
             return None, None, None
         except Exception as e:
-            print(f"Erro ao checar update: {e}")
+            print(f"Erro update: {e}") 
             return None, None, None
 
-    def realizar_atualizacao(self, download_url, nova_versao, tipo_arquivo):
+    def realizar_atualizacao(self, download_url, nova_versao, tipo_arquivo, callback_progresso=None):
         try:
             msg_tipo = "completa (inclui novas funções)" if tipo_arquivo == "ZIP" else "rápida"
             resp = messagebox.askyesno(
