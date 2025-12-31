@@ -16,7 +16,7 @@ from packaging import version
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # --- CONFIGURAÇÕES DE ATUALIZAÇÃO (PREENCHA AQUI) ---
-VERSAO_ATUAL = "1.2"  # Mude isso aqui sempre que gerar um novo .exe
+VERSAO_ATUAL = "1.3"  # Mude isso aqui sempre que gerar um novo .exe
 REPO_USER = "Rafaelgarra"  # Ex: "JoaoSilva"
 REPO_NAME = "Fersan_Management"     # Ex: "RoboFinanceiro"
 NOME_EXECUTAVEL = "RoboFersan.exe"   # Nome do arquivo final no PC do usuário
@@ -195,7 +195,7 @@ class AutoUpdater:
             app_path = sys.executable
             app_dir = os.path.dirname(app_path)
             
-            # Cria pasta temporária para download
+            # Cria pasta temporária
             tmp_dir = os.path.join(app_dir, "temp_update")
             if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
             os.makedirs(tmp_dir)
@@ -203,8 +203,8 @@ class AutoUpdater:
             nome_arquivo = f"update.{tipo_arquivo.lower()}"
             caminho_download = os.path.join(tmp_dir, nome_arquivo)
             
-            # --- DOWNLOAD ---
-            # self.root.title("Baixando atualização...") # Opcional: feedback visual simples
+            # --- DOWNLOAD COM PROGRESSO VISUAL ---
+            # Acessa os widgets da janela
             resposta = requests.get(download_url, stream=True)
             with open(caminho_download, 'wb') as f:
                 for chunk in resposta.iter_content(chunk_size=4096):
