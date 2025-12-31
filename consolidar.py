@@ -15,7 +15,7 @@ from packaging import version
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-VERSAO_ATUAL = "1.3.3"
+VERSAO_ATUAL = "1.3.4"
 REPO_USER = "Rafaelgarra"
 REPO_NAME = "Fersan_Management"
 NOME_EXECUTAVEL = "RoboFersan.exe"
