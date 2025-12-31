@@ -15,7 +15,7 @@ from tkinter import scrolledtext, messagebox, ttk
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # --- CONFIGURAÇÕES DE ATUALIZAÇÃO (PREENCHA AQUI) ---
-VERSAO_ATUAL = "2.5"  # Mude isso aqui sempre que gerar um novo .exe
+VERSAO_ATUAL = "1.1"  # Mude isso aqui sempre que gerar um novo .exe
 REPO_USER = "Rafaelgarra"  # Ex: "JoaoSilva"
 REPO_NAME = "Fersan_Management"     # Ex: "RoboFinanceiro"
 NOME_EXECUTAVEL = "RoboFersan.exe"   # Nome do arquivo final no PC do usuário
@@ -324,7 +324,7 @@ class RoboFinanceiroApp:
         self.log_area.pack(pady=10, padx=10)
         
         # Rodapé
-        lbl_footer = tk.Label(root, text="v2.5 - Novo Layout (8 Colunas)", bg="#E8E8E8", fg="#999")
+        lbl_footer = tk.Label(root, text="v1.1 - Novo Layout (8 Colunas)", bg="#E8E8E8", fg="#999")
         lbl_footer.pack(side=tk.BOTTOM, pady=5)
 
         self.root.after(2000, self.checar_updates_bg)
