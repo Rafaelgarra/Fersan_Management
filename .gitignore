@@ -1,0 +1,11 @@
+# Pastas pesadas de build (PyInstaller)
+dist/
+build/
+__pycache__/
+*.spec
+
+# Arquivos de segurança (NUNCA suba isso)
+.env
+
+# Dados (provavelmente você não quer extratos bancários públicos)
+extratos_bancarios/
