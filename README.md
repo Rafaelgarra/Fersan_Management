@@ -218,6 +218,3 @@ Para gerar os executáveis independentes para distribuição aos clientes:
    ```
 
 ---
-
-## 🛡️ Licença e Governança
-Desenvolvido para uso corporativo exclusivo do grupo empresarial **Fersan_Management**. Todos os direitos reservados.
