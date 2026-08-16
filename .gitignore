@@ -9,3 +9,7 @@ __pycache__/
 
 # Dados (provavelmente você não quer extratos bancários públicos)
 extratos_bancarios/
+
+# Documentação
+docs/
+FLUXO_CAIXA_FERSAN.xlsx

@@ -3,3 +3,6 @@ requests
 openpyxl
 xlsxwriter
 python-dotenv
+streamlit
+plotly
+packaging
